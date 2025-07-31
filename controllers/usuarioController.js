@@ -42,6 +42,7 @@ exports.agregarUsuario = async (req, res) => {
       email: req.body.email,
       first_name: req.body.first_name,
       last_name: req.body.last_name,
+      avatar: req.body.avatar,
     };
 
     // Peticion para crear el usuario
@@ -67,6 +68,7 @@ exports.actualizarUsuario = async (req, res) => {
       email: req.body.email,
       first_name: req.body.first_name,
       last_name: req.body.last_name,
+      avatar: req.body.avatar,
     };
 
     // revisar el ID
