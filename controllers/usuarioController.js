@@ -1,103 +1,124 @@
-require('dotenv').config();
-// Modelo para Usuario
-const axios = require('axios');
-// Resultado de validacion de usuarios
-const { validationResult } = require('express-validator');
+import 'dotenv/config';
+import axios from 'axios';
+import { validationResult } from 'express-validator';
+
+const REQRES_API = 'https://reqres.in/api/users';
+
+// reqres.in exige desde 2024 una x-api-key (gratuita en https://app.reqres.in) para todos sus endpoints.
+const reqresHeaders = () =>
+  process.env.REQRES_API_KEY ? { headers: { 'x-api-key': process.env.REQRES_API_KEY } } : {};
 
 // Listado de todos los usuarios
-exports.getUsuarios = async (req, res) => {
+export const getUsuarios = async (req, res) => {
   try {
-    let response = await axios.get('https://reqres.in/api/users');
-    res.send(response.data);
+    const response = await axios.get(REQRES_API, reqresHeaders());
+    res.json(response.data);
   } catch (error) {
-    console.log(error);
-    res.status(500).send('Ha ocurrido un error al intentar obtener los datos.');
+    console.error(error);
+    res.status(500).json({ msg: 'Ha ocurrido un error al intentar obtener los datos.' });
   }
 };
 
-// Obtneer datos del usuario por ID
-exports.getUsuariobyId = async (req, res) => {
+// Proxy de avatares: reqres.in sirve sus imágenes con `Cross-Origin-Resource-Policy: same-origin`
+// (y sin `Access-Control-Allow-Origin`), por lo que el navegador bloquea cargarlas directamente
+// desde el frontend. Las servimos desde nuestro propio origen para evitar ese bloqueo.
+export const getAvatar = async (req, res) => {
+  const { url } = req.query;
+
+  let parsedUrl;
   try {
-    // revisar el ID
-    let usuarioId = req.params.id;
-    let response = await axios.get('https://reqres.in/api/users' + '/' + usuarioId);
+    parsedUrl = new URL(url);
+  } catch {
+    return res.status(400).json({ msg: 'URL de avatar no válida.' });
+  }
+
+  if (parsedUrl.hostname !== 'reqres.in') {
+    return res.status(400).json({ msg: 'URL de avatar no válida.' });
+  }
+
+  try {
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    res.set('Content-Type', response.headers['content-type'] ?? 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
     res.send(response.data);
   } catch (error) {
-    console.log(error);
-    res.status(500).send('Ha ocurrido un error al obtener los datos del registro.');
+    console.error(error);
+    res.status(502).json({ msg: 'No se ha podido obtener el avatar.' });
+  }
+};
+
+// Obtener datos del usuario por ID
+export const getUsuariobyId = async (req, res) => {
+  try {
+    const usuarioId = req.params.id;
+    const response = await axios.get(`${REQRES_API}/${usuarioId}`, reqresHeaders());
+    res.json(response.data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: 'Ha ocurrido un error al obtener los datos del registro.' });
   }
 };
 
 // Añadir nuevo usuario
-exports.agregarUsuario = async (req, res) => {
-  // Revisar si hay errores
+export const agregarUsuario = async (req, res) => {
   const errores = validationResult(req);
   if (!errores.isEmpty()) {
     return res.status(400).json({ errores: errores.array() });
   }
 
   try {
-    // Crear un nuevo usuario
-    let payload = {
+    const payload = {
       email: req.body.email,
       first_name: req.body.first_name,
       last_name: req.body.last_name,
       avatar: req.body.avatar,
     };
 
-    // Peticion para crear el usuario
-    let response = await axios.post('https://reqres.in/api/users', payload);
-    res.send(response.data);
+    const response = await axios.post(REQRES_API, payload, reqresHeaders());
+    res.status(201).json(response.data);
   } catch (error) {
-    console.log(error);
-    res.status(500).send('Ha ocurrido un error al intentar crear el usuario.');
+    console.error(error);
+    res.status(500).json({ msg: 'Ha ocurrido un error al intentar crear el usuario.' });
   }
 };
 
 // Modificar usuario
-exports.actualizarUsuario = async (req, res) => {
-  // Revisar si hay errores
+export const actualizarUsuario = async (req, res) => {
   const errores = validationResult(req);
   if (!errores.isEmpty()) {
     return res.status(400).json({ errores: errores.array() });
   }
 
   try {
-    // Datos a actualizar del usuario
-    let payload = {
+    const payload = {
       email: req.body.email,
       first_name: req.body.first_name,
       last_name: req.body.last_name,
       avatar: req.body.avatar,
     };
 
-    // revisar el ID
-    let usuarioId = req.params.id;
-    // Peticion para actualizar el usuario
-    let response = await axios.put('https://reqres.in/api/users' + '/' + usuarioId, payload);
-    res.send(response.data);
+    const usuarioId = req.params.id;
+    const response = await axios.put(`${REQRES_API}/${usuarioId}`, payload, reqresHeaders());
+    res.json(response.data);
   } catch (error) {
-    console.log(error);
-    res.status(500).send('Ha ocurrido un error al intentar modificar el usuario.');
+    console.error(error);
+    res.status(500).json({ msg: 'Ha ocurrido un error al intentar modificar el usuario.' });
   }
 };
 
 // Eliminar usuario
-exports.eliminarUsuarios = async (req, res) => {
+export const eliminarUsuarios = async (req, res) => {
   try {
-    // revisar el ID
-    let usuarioId = req.params.id;
+    const usuarioId = req.params.id;
 
-    // si el proyecto existe o no
     if (!usuarioId) {
       return res.status(404).json({ msg: 'Usuario no encontrado.' });
     }
 
-    // Eliminar el Proyecto
-    await axios.delete('https://reqres.in/api/users' + '/' + usuarioId);
+    await axios.delete(`${REQRES_API}/${usuarioId}`, reqresHeaders());
     res.json({ msg: 'Usuario eliminado.' });
   } catch (error) {
-    console.log(error);
-    res.status(500).send('Error en el servidor.');
+    console.error(error);
+    res.status(500).json({ msg: 'Error en el servidor.' });
   }
 };
