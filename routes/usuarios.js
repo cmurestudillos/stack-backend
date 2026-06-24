@@ -1,21 +1,31 @@
-// Importamos Express
-const express = require('express');
+import express from 'express';
+import { body } from 'express-validator';
+import * as usuarioController from '../controllers/usuarioController.js';
+
 const router = express.Router();
-// controlador para proyectos
-const usuarioController = require('../controllers/usuarioController');
+
+const usuarioValidators = [
+  body('email').isEmail().withMessage('El email no es válido.'),
+  body('first_name').notEmpty().withMessage('El nombre es obligatorio.'),
+  body('last_name').notEmpty().withMessage('El apellido es obligatorio.'),
+];
 
 // Obtener todos los usuarios
 router.get('/', usuarioController.getUsuarios);
 
+// Proxy de avatares (debe ir antes de /:id para no ser capturada por ese parámetro)
+router.get('/avatar', usuarioController.getAvatar);
+
 // Obtener usuario por ID
 router.get('/:id', usuarioController.getUsuariobyId);
+
 // Crear un usuario
-router.post('/', usuarioController.agregarUsuario);
+router.post('/', usuarioValidators, usuarioController.agregarUsuario);
 
 // Actualizar usuario via ID
-router.put('/:id', usuarioController.actualizarUsuario);
+router.put('/:id', usuarioValidators, usuarioController.actualizarUsuario);
 
-// Eliminar un Usuario
+// Eliminar un usuario
 router.delete('/:id', usuarioController.eliminarUsuarios);
 
-module.exports = router;
+export default router;

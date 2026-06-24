@@ -1,22 +1,22 @@
-const express = require('express');
-const conectarDB = require('./config/db');
-const cors = require('cors');
-const chalk = require('chalk');
+import express from 'express';
+import cors from 'cors';
+import conectarDB from './config/db.js';
+import usuariosRouter from './routes/usuarios.js';
 
 const app = express();
 
-conectarDB();
+await conectarDB();
 
 const corsOptions = {
   origin: '*',
-  methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH'],
-  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  credentials: false,
 };
 app.use(cors(corsOptions));
 
-app.use(express.json({ extended: true }));
+app.use(express.json());
 
-app.use('/api/usuarios', require('./routes/usuarios'));
+app.use('/api/usuarios', usuariosRouter);
 
 // Para desarrollo local
 if (process.env.NODE_ENV !== 'production') {
@@ -27,4 +27,4 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Exportar la aplicación para Vercel
-module.exports = app;
+export default app;
